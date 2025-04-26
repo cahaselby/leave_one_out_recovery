@@ -1,0 +1,22 @@
+#!/bin/bash --login
+########## SBATCH Lines for Resource Request ##########
+ 
+#SBATCH --time=4:00:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --nodes=1                 # number of different nodes - could be an exact number or a range of nodes (same as -N)
+#SBATCH --ntasks=1                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=4           # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem-per-cpu=16G            # memory required per allocated CPU (or core) - amount of memory (in bytes)
+#SBATCH --job-name 4hour_4core_loo   # you can give your job a name for easier identification (same as -J)  
+
+########## Command Lines to Run ##########
+scontrol show job $SLURM_JOB_ID     ### write job information to output file
+
+module load Anaconda/3
+
+source activate loo 
+
+cd /mnt/home/user/tensor_code/
+python run_trial.py 100 300 10 25 12 "1,0.1,0.01,0.001,0.0001,0.00001,0.000001" g lk kron
+python run_trial.py 100 300 10 225 12 "1,0.1,0.01,0.001,0.0001,0.00001,0.000001" g lk khat
+
+js -j $SLURM_JOB_ID
