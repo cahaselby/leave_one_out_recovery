@@ -6,9 +6,11 @@ The file `run_trial.py` parses command line arguments to run and produce results
 
 ``python run_trial.py 10 300 10 10 20 1e-3 g lk kron``
 
-will run trials and save results in a csv. The arguments are number of trials, side length, rank, m, m_c, noise level, measurement type, tensor type, and leave one out type, so in this case 10 independent trials of a tensor with sidelengths of 300 of Tucker rank (10,10,10). The measurements will sketch a side to size 10 for producing leave-one-out measurement tensors of size (10,10,300), (10,300,10) and (300,10,10) as well as a measurement tensor of size (20,20,20) for estimating the core (two-pass scenario). The noise level is additive gaussian noise at an SNR of 30 db (`1e-3`), the component measurement matrices are guassian (`g`) the unsketched tensor is a randomly generated low rank (`lk`) tensor, and the measurement ensemble is equivalent to the Kronecker product of the component measurement matrices (`kron`)
+will run trials and save results in a csv. The arguments are number of trials, side length, rank, m, m_c, noise level, measurement type, tensor type, and leave one out type, so in this case 10 independent trials of a tensor with sidelengths of 300 of Tucker rank (10,10,10). The measurements will sketch a side to size 10 for producing leave-one-out measurement tensors of size (10,10,300), (10,300,10) and (300,10,10) as well as a measurement tensor of size (20,20,20) for estimating the core (two-pass scenario). The noise level is additive gaussian noise at an SNR of 30 db (`1e-3`), the component measurement matrices are guassian (`g`) the unsketched tensor is a randomly generated low rank (`lk`) tensor, and the measurement ensemble is equivalent to the Kronecker product of the component measurement matrices (`kron`).
 
-Writing results to  results/results_<mmddtttttt_serial>.csv
+The output then writes to a timestamped csv. Sample output is below:
+
+``Writing results to  results/results_<mmddtttttt_serial>.csv``
 |Trial|meas|t_typ|loo| n|rank|m|m_c| SNR| 2-error|  1-error|  compress| sketch_t| recover_t|angle|
 |-|-|--|----|---|--|--|--|--|--------|---------|--------|----------|---------|---------|
 |0|g|lk|kron|300|10|10|20|30|6.15E-04| 1.35E-03|3.63E-03|  4.72E-02| 4.89E-02| 6.58E-02|
