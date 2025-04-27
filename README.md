@@ -1,5 +1,6 @@
 # leave_one_out_recovery
-Code to reproduce experiments and figures in the pre-print "Efficient and Generalized Low Rank Tensor Recovery"
+
+Code to reproduce experiments and figures in the pre-print *[Fast and Low-Memory Compressive Sensing Algorithms for Low Tucker-Rank Tensor Approximation from Streamed Measurements.](https://arxiv.org/abs/2308.13709)*
 
 ## Quick-start
 The file `run_trial.py` parses command line arguments to run and produce results with the provided parameters. For example, in an environment with the ``requirements.txt`` installed and `loo_recovery.py` the command
@@ -23,3 +24,7 @@ The output then writes to a timestamped csv. Sample output is below:
 |7|g|lk|kron|300|10|10|20|30|7.19E-04| 1.28E-03|3.63E-03|  4.97E-02| 5.34E-02| 8.37E-02|
 |8|g|lk|kron|300|10|10|20|30|6.74E-04| 1.36E-03|3.63E-03|  4.78E-02| 5.39E-02| 8.53E-02|
 |9|g|lk|kron|300|10|10|20|30|6.32E-04| 1.42E-03|3.63E-03|  4.49E-02| 5.34E-02| 6.13E-02|
+
+## Streaming Demo
+
+In ``video-demo.ipynb`` we have a demonstration of the leave-one-out measurements and recovery applied to a streaming, one-pass of a data tensor. The data tensor in this case is the video found in <https://figshare.com/articles/media/Walking_Past_Camera/15135186?file=29084181> similar to what is done for this paper: <https://github.com/OsmanMalik/tucker-tensorsketch>.
