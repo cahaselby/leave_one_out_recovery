@@ -1,4 +1,4 @@
-# leave_one_out_recovery
+# Leave-One-Out Measurement and Recovery
 
 Code to reproduce experiments and figures in the pre-print *[Fast and Low-Memory Compressive Sensing Algorithms for Low Tucker-Rank Tensor Approximation from Streamed Measurements.](https://arxiv.org/abs/2308.13709)*
 
