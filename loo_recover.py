@@ -1,6 +1,6 @@
 
 """
-12 MAY 2023
+8 MAY 2025
 
 This is the module needed to run leave one out recovery
 
@@ -21,15 +21,16 @@ import itertools
 import timeit
 from scipy.optimize import curve_fit
 from scipy.linalg import khatri_rao,hilbert,null_space,subspace_angles, hadamard, dft
-#import skvideo.io
 from sklearn.cluster import KMeans
 
+#These helper functions are for various random matrices used to construct measurement ensembles. 
 
 #Helper function for returning a gaussian JL measurement matrix
 def gauss_meas(dim, k):
     #np.random.seed(0)
     return np.sqrt(1/(k))*np.random.normal(0.0, 1.0, [k, dim])
-
+    
+#Rademacher along diagonal (D),  Hadamard (H), randomly sample the row (S)
 def SHRT_meas(dim, k):
     D = np.diag(np.random.choice([1,-1], dim))
     H = np.sqrt(1/k)*hadamard(dim)
@@ -40,6 +41,7 @@ def SHRT_meas(dim, k):
     
     return S@H@D
 
+#Rademacher along the diagonal (D), Discrete Fourier Transform (F), randomly sample the rows (S)
 def RFD_meas(dim, k):
     D = np.diag(np.random.choice([1,-1], dim))
     F = np.sqrt(dim/k)*dft(dim)
@@ -50,6 +52,7 @@ def RFD_meas(dim, k):
     
     return S@F@D
 
+#Super diagonal tensors only have non-zero entries along coordinates i,i,i for i in [dim], use this as a tensor to measure
 def generate_super_diagonal_tensor(diagonal_elems, dim):
     '''
     Generate super diagonal tensor of dimension = dim
@@ -137,7 +140,11 @@ def eval_rerr(X, X_hat, X0=None):
            #np.linalg.norm(X0.reshape(np.size(X), 1), 'fro')
 
 def add_noise(T,relnoise):
-
+    """
+    :param T: tensor
+    :param relnoise: the proportion of T's norm that the white noise will be scaled to and added to T
+    :return: T + scaled Noise
+    """
     Noise = np.random.normal(size=T.shape)
     #Normalize 
     Noise = Noise / tl.norm(Noise)
@@ -147,8 +154,9 @@ def add_noise(T,relnoise):
     return T +  Noise
 
 def average_results(results,headers,groupfield,fieldy):
-
-
+    """
+    helper function that takes result rows from run_trial.py and calculates basic statistics 
+    """
     df = pd.DataFrame(results,columns = headers)
 
 
@@ -159,7 +167,20 @@ def average_results(results,headers,groupfield,fieldy):
     return agg
 
 def measurement_ensemble(N,d,S,R,meas_func,typ='g',std=1):
-
+    """
+    Constructs a dictionary of random matrices that can be used to measure a tensor in a leave one out fasion. e.g. A[0][1] will store a random matric of type typ intended to measure mode 1 when creating a measurement tensor thatleaves out mode 0
+    
+    Stores the matrices for creating the core sketch A[N]
+    
+    :param N: integer number of modes of the tensor. e.g. n=3
+    :param d: tuple that lists the side lengths of the tensor to be measured, e.g. (300,200,300)
+    :param S: tuple of the sketching dimensions for the core sketch e.g. (20,20,20)
+    :param R: tuple of the sketching dimensions for the leave-one-out measurements so R = (10,10,10) would result in A[0][1] storing a matrix of size 10 x 300
+    :meas_func: function handle that will generate the random matrix, e.g. my_random_matrix_generator if the user wishes to use the types of random matrices defined in this module
+    :typ: type of random matrix used,  g = gaussian, rfd = sampled rademacher x DFT, shrt = sampled rademacher x hadamard, u = uniform, sp = sparse, r = rademacher, sp0 = alternate sparse, sp1 = alternate sparse
+    :std: deprecated - scaling factor
+    :return A: a dictionary of (N+1)*d random matrices that can be used to measure a tensor in a leave-one-out fashion.
+    """
     A = {}
     A[N] = []  
     for m in range(N):
@@ -170,7 +191,6 @@ def measurement_ensemble(N,d,S,R,meas_func,typ='g',std=1):
                 A[m].append(np.eye(d[n]))
             else:
                 A[m].append(meas_func(d[n],R[n],typ=typ))
-            
   
         A[N].append(meas_func(d[m],S[m],typ=typ))
     
