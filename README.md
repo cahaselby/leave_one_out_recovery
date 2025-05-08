@@ -35,23 +35,23 @@ Below we have an example for some choices of parameteers of how to use the funct
  
 Suppose
 
-    ``dim = 3, number of modes of the tensor``
+   `` dim = 3, number of modes of the tensor``
     
-    ``n = 300, side length of the tensor``
+   `` n = 300, side length of the tensor``
     
-    ``r = 10, tucker rank (which will be repeated for each mode (10,10,10))``
+   `` r = 10, tucker rank (which will be repeated for each mode (10,10,10))``
     
-    ``tt = 'lk', tensor type, which could be a random low tucker rank tensor``
+   `` tt = 'lk', tensor type, which could be a random low tucker rank tensor``
     
-    ``eps = 1e-3, relative magnitude of the additive noise to be added to the tensor``
+   `` eps = 1e-3, relative magnitude of the additive noise to be added to the tensor``
     
-    ``M = (20,20,20), sketching dimension for the leave-one-out measurment tensors``
+   `` M = (20,20,20), sketching dimension for the leave-one-out measurment tensors``
     
-    ``M_c = (40,40,40), sketching dimensions for the measurement tensor for the core (one-pass scenario)``
+   `` M_c = (40,40,40), sketching dimensions for the measurement tensor for the core (one-pass scenario)``
     
-    ``mt = 'g', measurement type of random variable e.g. guassian random matrices``
+   `` mt = 'g', measurement type of random variable e.g. guassian random matrices``
     
-    ``mode = 'kron', method to use the matrices to measure the tensor``
+   `` mode = 'kron', method to use the matrices to measure the tensor``
 
 Generate a tensor with known properties to test on Y is noisey, Y_true is noiseless, S_true is the (a) core factor, U_true are the factor matrices
 
@@ -63,7 +63,7 @@ Create the measurement ensemble A_kron where M and M_c store the sketching dimen
             
 Now create the measurement tensors and put them in dictionary B_kron using the ensemble A_kron
 
-    ``B_kron = loo_recover.measure_tensor(Y,A_kron,mode=mode)``
+   `` B_kron = loo_recover.measure_tensor(Y,A_kron,mode=mode)``
 
 Solve the least square problems for finding the factors U and core S_tilde from the measurements. This requires a single pass
     
@@ -79,5 +79,6 @@ Another pass on the original tensor can be used to calculate a more accurate cor
 
 Calculate the relative errors with helper functions
 
-    ``rel_error_one_pass = loo_recover.eval_rerr(Y,T_hat_one_pass,Y_true)``
-    ``rel_error_two_pass = loo_recover.eval_rerr(Y,T_hat_two_pass,Y_true)``
+   `` rel_error_one_pass = loo_recover.eval_rerr(Y,T_hat_one_pass,Y_true)``
+    
+   `` rel_error_two_pass = loo_recover.eval_rerr(Y,T_hat_two_pass,Y_true)``
