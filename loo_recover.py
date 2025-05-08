@@ -1,15 +1,58 @@
-
 """
 8 MAY 2025
 
-This is the module needed to run leave one out recovery
+This is the module needed to run leave one out recovery. 
+
+One can use it to generate a ensemble of measurement matrices A to measure a randomly generated tensor T producing measurement tensors B and then recover the factors of the tucker (potentially approximation)
+
+T = [[S_tilde; U_0, ..., U_N-1]] 
+
+Below we have an example for some choices of parameteers:
+ 
+Suppose
+    dim = 3, number of modes of the tensor
+    n = 300, side length of the tensor
+    r = 10, tucker rank (which will be repeated for each mode (10,10,10))
+    tt = 'lk', tensor type, which could be a random low tucker rank tensor
+    eps = 1e-3, relative magnitude of the additive noise to be added to the tensor
+    M = (20,20,20), sketching dimension for the leave-one-out measurment tensors
+    M_c = (40,40,40), sketching dimensions for the measurement tensor for the core (one-pass scenario)
+    mt = 'kron', method to use the matrices to measure the tensor
+
+Generate a tensor with known properties to test on Y is noisey, Y_true is noiseless, S_true is the (a) core factor, U_true are the factor matrices
+
+    Y, Y_true, S_true, U_true = square_tensor_gen(n, r, dim=3, typ=tt, noise_level=eps, seed=None, sparse_factor=0.2)
+
+Create the measurement ensemble A_kron where M and M_c store the sketching dimensions to be used for the factors and core measurements:
+
+    A_kron = measurement_ensemble(dim,N,M_c,M,my_random_matrix_generator,typ=mt)
+            
+Now create the measurement tensors and put them in dictionary B_kron using the ensemble A_kron
+
+    B_kron = loo.measure_tensor(Y,A_kron,mode=mode)
+
+Solve the least square problems for finding the factors U and core S_tilde from the measurements. This requires a single pass
+    
+    S_tilde,U = lsmlsvd_brks(A_kron,B_kron,R,mode=mode)
+    
+If you want the full tensor, can construct now from the (estiamted) factors
+
+    T_hat_one_pass = tl.tucker_tensor.tucker_to_tensor((S_tilde,U))
+
+Another pass on the original tensor can be used to calculate a more accurate core factor, just apply the transpose of calculated factors U to the tensor 
+    
+    _hat_two_pass = tl.tucker_tensor.tucker_to_tensor((tl.tenalg.multi_mode_dot(Y,U,transpose=True),U))
+
+Calculate the relative errors with helper functions
+
+    rel_error_one_pass = loo.eval_rerr(Y,T_hat_one_pass,Y_true)
+    rel_error_two_pass = loo.eval_rerr(Y,T_hat_two_pass,Y_true)
 
 author: Cullen Haselby 
 """
 #########################
 # IMPORTS
 #########################
-
 
 import numpy as np
 from scipy import fftpack
@@ -24,7 +67,6 @@ from scipy.linalg import khatri_rao,hilbert,null_space,subspace_angles, hadamard
 from sklearn.cluster import KMeans
 
 #These helper functions are for various random matrices used to construct measurement ensembles. 
-
 #Helper function for returning a gaussian JL measurement matrix
 def gauss_meas(dim, k):
     #np.random.seed(0)
@@ -69,15 +111,16 @@ def my_random_matrix_generator(n,m,  std=1, typ='g', random_seed=1, sparse_facto
     Generate random matrix of size m x n
     :param m: length
     :param n: width
-    :param Rinfo_bucket: parameters fo generating the random matrix: std (standard devidation for each entry); typ
+    :param R: parameters fo generating the random matrix: std (standard devidation for each entry); typ
     (u: uniform; g: Gaussian; sp: sparsity=sparse_factor; sp0: sparsity=2/3;sp1:sparsity=1-1/sqrt(n) )
     :return: random matrix
     '''
 
     #np.random.seed(random_seed)
     types = set(['r','g', 'u', 'sp', 'sp0', 'sp1','rfd','real_rfd', "shrt"])
-    assert typ in types, "please aset your type of random variable correctly"
+    assert typ in types, "please set your type of random variable correctly"
 
+    #type of random matrix used,  g = gaussian, rfd = sampled rademacher x DFT, shrt = sampled rademacher x hadamard, u = uniform, sp = sparse, r = rademacher, sp0 = alternate sparse, sp1 = alternate sparse
     if typ == 'g':
         return np.random.normal(0, 1, size=(m, n)) * std
         
@@ -168,7 +211,7 @@ def average_results(results,headers,groupfield,fieldy):
 
 def measurement_ensemble(N,d,S,R,meas_func,typ='g',std=1):
     """
-    Constructs a dictionary of random matrices that can be used to measure a tensor in a leave one out fasion. e.g. A[0][1] will store a random matric of type typ intended to measure mode 1 when creating a measurement tensor thatleaves out mode 0
+    Returns a dictionary of random matrices that can be used to measure a tensor in a leave one out fasion. e.g. A[0][1] will store a random matric of type typ intended to measure mode 1 when creating a measurement tensor thatleaves out mode 0
     
     Stores the matrices for creating the core sketch A[N]
     
@@ -179,7 +222,7 @@ def measurement_ensemble(N,d,S,R,meas_func,typ='g',std=1):
     :meas_func: function handle that will generate the random matrix, e.g. my_random_matrix_generator if the user wishes to use the types of random matrices defined in this module
     :typ: type of random matrix used,  g = gaussian, rfd = sampled rademacher x DFT, shrt = sampled rademacher x hadamard, u = uniform, sp = sparse, r = rademacher, sp0 = alternate sparse, sp1 = alternate sparse
     :std: deprecated - scaling factor
-    :return A: a dictionary of (N+1)*d random matrices that can be used to measure a tensor in a leave-one-out fashion.
+    :return A: a dictionary of (N+1)*d random matrices that can be used to measure a tensor in a leave-one-out fashion using the measure_tensor function in this module.
     """
     A = {}
     A[N] = []  
@@ -198,10 +241,24 @@ def measurement_ensemble(N,d,S,R,meas_func,typ='g',std=1):
 
 
 def measure_tensor(T,A,mode='kron'):
+    """
+    Returns a dicttionary of leave-one-out measurement tensors which are calculated by applying the ensemble A to tensor T in either a Kronecker or Khatri-Rhao fashion. 
+    
+    The last entry in the returned dictionary is the measurement tensor which has all modes sketched and is suitable for estimating the core factor of T
+    
+    :param T: The tensor to be measured
+    :param A: The dictionary of matrices to be used to measure T, e.g. the output of the measurement_ensemble function
+    :param mode: 'khat' or 'kron' method for using the measurement ensemble
+   
+    :return B: a dictionary of measurement tensors, one leave-one-out tensor per mode of T plus the last entry is a tensor where all modes are sketched for use in calculating the core (in the one-pass scenario).
+    """
+    #number of modes to the tensor
     N = len(A.keys()) - 1
 
+    #dictionary to store the measurement tensors
     B = {}
-    
+
+    #if its kronecker style measurements, for each mode m, generate a measurement tensor B[m] by sketching each mode i by A[m][i]. Where i=m there should be no compression since that matrix will be full rank in the leave-one-out ensemble
     if mode=='kron':
         for m in range(N):
             B[m] = tl.tenalg.multi_mode_dot(T,A[m],skip=m)
@@ -209,18 +266,21 @@ def measure_tensor(T,A,mode='kron'):
         #B[N] = tl.tenalg.multi_mode_dot(T,A[N])
         
     elif mode=='khat':
-
+        #in the Khatri-Rhao instance, for each mode m flatten the tensor and right multiply by the khatri rhao products of A[m] for all but the left out mode
         for m in range(N):
             measure_mat = tl.tenalg.khatri_rao([a.T for a in A[m]],skip_matrix=m)
 
             #reshaped = tuple(A[m][k].shape[0] for k  in range(N))
             B[m] = tl.unfold(T,m)@measure_mat
 
+    #the last entry in the dictionary is for core estimation in the one-pass scenario. This measurement tensor is sketched on all modes, with none left out using matrices in A[N]
     B[N] = tl.tenalg.multi_mode_dot(T,A[N])
     return B
 
 def square_tensor_gen(n, r, dim=3, typ='lk', noise_level=0.1, seed=None, sparse_factor=0.2):
     '''
+    This function is for generating different types of tensors to measure and recover
+
     :param n: size of the tensor generated n*n*...*n
     :param r: rank of the tensor or equivalently, the size of core tensor
     :param dim: # of dimensions of the tensor, default set as 3
@@ -311,23 +371,44 @@ def square_tensor_gen(n, r, dim=3, typ='lk', noise_level=0.1, seed=None, sparse_
         return tensor, tensor0
     
 def lsmlsvd_brks(A,B,R,mode='kron'):
+    '''
+    After potentially unfolding tensors, this function solves a series of linear least squared problems (e.g. AU = B, where U is unknown) 
+    
+    This can be used to recover factors from leave-one-out style measurements (kronecker or khatri-rhao) of tensors which permit a Tucker or multi-mode Tensor Singular Value Decomposition
+
+    Returns the factors S_tilde, U of the recovered tensor, S_tilde is the core factor (in the one pass scenario) and U is a list of factor matrices for each mode.
+
+    :param A: Dictionary of measurement matrices such as the output of measurement_ensemble. For example A[0][1] is the matrix used to compress mode 1 in the measurement tensor which leaves out mode 0.
+    :param B: Dictionary of measurement tensors, such as the output of measure_tensor. tensor B[m] leaves mode m uncompressed. The last entry, B[N] is assumed to be sketched in all dimensions and used for estimating the core factor in the one-pass scenario
+    :param R: tuple that is the (truncated) tucker rank of the tensor to be recovered
+    :param mode: 'khat' or 'kron' depending on if the method to produce B using A was kronecker or khatri-rhao
+    '''
+
+    #Number of modes
     N = len(A.keys()) - 1
+
+    #this is where the factor matrices go
     U = []
     
     for m in range(N):
+        #for each mode prepare the right hand side of the least square problem. If its Kronecker, B will be a tensor
         if mode=='kron': 
             rhs = tl.unfold(B[m],m)
+        #if its not kronecker, B should already be unfolded so the right hand side doesn't need anything special 
         else:
             rhs = B[m]
 
-            
+        #solve the least square problem A[m][m] x F = B
         F = np.linalg.lstsq(A[m][m], rhs,rcond=None)
-        #Q,_ = np.linalg.qr(F[0])
+        
+        #Truncate and normalize the solution by finding SVD of unknown, keeping the first R[m] columns. Normalization not strictly necessary but useful convention we can impose on the factors
+        #This would be an alternative method to do the same Q,_ = np.linalg.qr(F[0])
         Q,_, _ = np.linalg.svd(F[0])
 
         U.append(Q[:,:R[m]])
 
-
+    #this loop solves iteratively for the core factor S_tilde on each mode; this is the way to estimate the core in the one-pass scenario
+    #this is equivalent (but more memory movement efficient) to solving (A[N][0] x U_0) kron (A[N][1] x U_1) kron ... kron (A[N-1][N-1] U_N-1) vec(S_tilde) = vec(B[N])
     S_tilde = B[N]
     mr = list(S_tilde.shape)
     S_tilde = tl.unfold(S_tilde,0)
