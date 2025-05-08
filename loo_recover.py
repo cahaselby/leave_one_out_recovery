@@ -37,16 +37,16 @@ Solve the least square problems for finding the factors U and core S_tilde from 
     
 If you want the full tensor, can construct now from the (estiamted) factors
 
-    T_hat_one_pass = tl.tucker_tensor.tucker_to_tensor((S_tilde,U))
+    T_hat_one_pass = tensorly.tucker_tensor.tucker_to_tensor((S_tilde,U))
 
 Another pass on the original tensor can be used to calculate a more accurate core factor, just apply the transpose of calculated factors U to the tensor 
     
-    _hat_two_pass = tl.tucker_tensor.tucker_to_tensor((tl.tenalg.multi_mode_dot(Y,U,transpose=True),U))
+   T_hat_two_pass = tensorly.tucker_tensor.tucker_to_tensor((tl.tenalg.multi_mode_dot(Y,U,transpose=True),U))
 
 Calculate the relative errors with helper functions
 
-    rel_error_one_pass = loo.eval_rerr(Y,T_hat_one_pass,Y_true)
-    rel_error_two_pass = loo.eval_rerr(Y,T_hat_two_pass,Y_true)
+    rel_error_one_pass = eval_rerr(Y,T_hat_one_pass,Y_true)
+    rel_error_two_pass = eval_rerr(Y,T_hat_two_pass,Y_true)
 
 author: Cullen Haselby 
 """
