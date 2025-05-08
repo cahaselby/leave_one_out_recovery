@@ -34,14 +34,23 @@ In ``video-demo.ipynb`` we have a demonstration of the leave-one-out measurement
 Below we have an example for some choices of parameteers of how to use the functions exposed in ``loo_recover.py``
  
 Suppose
+
     ``dim = 3, number of modes of the tensor``
+    
     ``n = 300, side length of the tensor``
+    
     ``r = 10, tucker rank (which will be repeated for each mode (10,10,10))``
+    
     ``tt = 'lk', tensor type, which could be a random low tucker rank tensor``
+    
     ``eps = 1e-3, relative magnitude of the additive noise to be added to the tensor``
+    
     ``M = (20,20,20), sketching dimension for the leave-one-out measurment tensors``
+    
     ``M_c = (40,40,40), sketching dimensions for the measurement tensor for the core (one-pass scenario)``
+    
     ``mt = 'g', measurement type of random variable e.g. guassian random matrices``
+    
     ``mode = 'kron', method to use the matrices to measure the tensor``
 
 Generate a tensor with known properties to test on Y is noisey, Y_true is noiseless, S_true is the (a) core factor, U_true are the factor matrices
